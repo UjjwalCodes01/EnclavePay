@@ -1,0 +1,22 @@
+package z:tenant-treasury@0.1.0;
+
+world tenant-treasury {
+  import host:tenant/tenant-context@1.0.0;
+  import host:interfaces/logging@2.1.0;
+  import host:interfaces/kv-store@2.1.0;
+  import host:interfaces/http-with-placeholders@2.1.0;
+
+  export contracts;
+}
+
+interface contracts {
+  record generic-input {
+    input: option<list<u8>>,
+    user-profile: option<list<u8>>,
+    context: option<list<u8>>,
+  }
+
+  pay-invoice: func(req: generic-input) -> result<list<u8>, string>;
+  read-ledger: func(req: generic-input) -> result<list<u8>, string>;
+  delegate-mandate: func(req: generic-input) -> result<list<u8>, string>;
+}

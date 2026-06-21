@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Mandate {
+  id              String   @id @default(cuid())
+  approvedVendors String   // JSON array string
+  budgetRemaining Float
+  budgetStart     Float
+  currency        String
+  expiresAt       Int
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  invoiceId String   @unique
+  vendorId  String
+  amount    Float
+  currency  String
+  status    String   @default("PENDING")
+}
+
+model LedgerRow {
+  seq       Int      @id @default(autoincrement())
+  at        String
+  invoiceId String
+  status    String
+  layer     String
+  detail    String
+}

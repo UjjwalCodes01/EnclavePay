@@ -1,0 +1,23 @@
+{
+  "name": "aegis-t3-treasury",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Compliance-gated agentic treasury demo for Terminal 3 ADK.",
+  "workspaces": [
+    "dashboard",
+    "orchestrator"
+  ],
+  "scripts": {
+    "dev": "npm --workspace dashboard run dev",
+    "build": "npm --workspace dashboard run build",
+    "lint": "npm --workspace dashboard run lint",
+    "cli:setup": "npm --workspace orchestrator run setup",
+    "cli:grant": "npm --workspace orchestrator run grant",
+    "cli:pay": "npm --workspace orchestrator run pay",
+    "cli:attacks": "npm --workspace orchestrator run attacks",
+    "env:doctor": "npm --workspace orchestrator run env:doctor",
+    "env:wallets": "npm --workspace orchestrator run env:wallets",
+    "env:identify": "npm --workspace orchestrator run env:identify",
+    "contract:build": "cargo build --manifest-path contracts/z-tenant-treasury/Cargo.toml --release --target wasm32-wasip2"
+  }
+}

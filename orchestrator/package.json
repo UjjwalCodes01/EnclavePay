@@ -1,0 +1,22 @@
+{
+  "name": "@aegis/orchestrator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "setup": "tsx src/0-tenant-setup.ts",
+    "grant": "tsx src/1-user-grant.ts",
+    "pay": "tsx src/2-agent-pay.ts",
+    "attacks": "tsx src/3-attacks.ts",
+    "env:doctor": "tsx src/4-env-doctor.ts",
+    "env:wallets": "tsx src/5-create-wallets.ts",
+    "env:identify": "tsx src/6-identify-t3.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@terminal3/t3n-sdk": "^3.9.0",
+    "dotenv": "^16.4.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
