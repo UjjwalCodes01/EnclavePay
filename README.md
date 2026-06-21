@@ -1,86 +1,109 @@
-# Aegis
+# Aegis: Compliance-Gated Agentic Treasury
 
-Aegis is a **Compliance-gated agentic treasury** built for the Terminal 3 Agent Dev Kit (ADK) bounty.
+**Live Demo:** [https://enclave-pay-dashboard.vercel.app/](https://enclave-pay-dashboard.vercel.app/)
 
-It demonstrates a secure, multi-agent (Agent-to-Agent or A2A) delegation flow where a human CFO grants an AI Orchestrator a scoped master mandate. The Orchestrator can then delegate sub-mandates to a Payout Agent. The Payout Agent can pay approved vendors only within the allowed budget, before the mandate expiry, and through placeholder-protected egress.
+Aegis is a secure, hardware-enforced **Multi-Agent Treasury** built for the **Terminal 3 Agent Dev Kit (ADK) bounty**. It provides a robust framework for governing autonomous AI agents with financial capabilities, ensuring they operate strictly within pre-defined boundaries.
 
-Crucially, **sensitive payout references remain as `{{profile.*}}` markers** until the Terminal 3 Trusted Execution Environment (TEE) securely resolves them. Every granted, paid, or blocked action is written to an immutable audit ledger.
+---
 
-## Features
-- **Multi-Agent Delegation:** Demonstrates A2A governance where parent agents restrict the capabilities of child agents.
-- **Placeholder Egress:** Sub-agents never see plain-text payout addresses, ensuring strict PCI/PII compliance.
-- **Hardware-Enforced Policies:** Budgets, vendor whitelists, and expiries are checked inside a Rust WASM contract running in a secure enclave (TEE).
-- **Dual Providers:** Run the system entirely locally using the `mock` provider, or connect to the real `t3` testnet.
+## 🌟 The Vision & Problem
 
-## Project Structure
+As AI agents become more capable, companies are beginning to trust them with financial execution (e.g., paying vendors, processing invoices, rebalancing portfolios). However, giving an AI direct access to a corporate treasury or API keys is fundamentally dangerous. 
 
-- `contracts/z-tenant-treasury` - The Rust/WASM TEE contract that enforces the treasury policy, AML checks, and ledger.
-- `orchestrator` - TypeScript CLI scripts to manage environments, setup the tenant, and simulate the agent attack/payout flow.
-- `dashboard` - A Next.js visual dashboard (with Prisma + SQLite) to observe the live state of the TEE contract.
+**The Problems we solve:**
+1. **Rogue AI:** Agents can hallucinate or be prompt-injected into sending funds to malicious actors.
+2. **PCI/PII Data Leaks:** Sub-agents typically need access to sensitive banking or crypto addresses to execute payments, expanding the attack surface.
+3. **Lack of Granular Delegation:** Traditional API keys are all-or-nothing. We lack a standardized way for a master agent to delegate a strict sub-mandate to a worker agent.
 
-## Local Setup
+**The Aegis Solution:**
+Aegis leverages the **Terminal 3 Trusted Execution Environment (TEE)** to enforce immutable, hardware-level guardrails. It introduces a hierarchical **Agent-to-Agent (A2A) delegation flow** where AI agents are restricted by cryptographic mandates, and sensitive payout data is completely abstracted away from the agents themselves using placeholders.
+
+---
+
+## 🏗️ How It Works (Architecture)
+
+Aegis separates the *decision-making* of the AI from the *execution* of the funds. 
+
+1. **The TEE Contract (`contracts/z-tenant-treasury`):** Written in Rust and compiled to WASM, this smart contract runs entirely inside Terminal 3's secure enclave. It enforces the rules.
+2. **The Orchestrator & Sub-Agents:** Autonomous AI agents that evaluate invoices and trigger execution. They hold throwaway EVM keys, but *never* hold the actual treasury funds.
+3. **The Dashboard:** A Next.js frontend that allows humans (e.g., a CFO) to monitor the ledger, configure the master mandate, and watch the agents operate in real-time.
+
+---
+
+## 🤖 The Agent-to-Agent (A2A) Flow
+
+Aegis demonstrates a sophisticated, three-tier hierarchical delegation system:
+
+1. **The Human (CFO):** A human user seeds the TEE contract with a master mandate (e.g., "$500,000 budget, expires in 30 days, approved vendors only").
+2. **The Orchestrator Agent (Agent 1):** The human grants the Orchestrator the right to manage the treasury. The Orchestrator cannot spend money directly. Instead, it scopes a specific sub-mandate (e.g., "Pay Vendor X up to $5,000") and delegates it to a specialized worker.
+3. **The Payout Agent (Agent 2):** The sub-agent receives the sub-mandate and executes the `pay-invoice` function inside the TEE. 
+
+If any agent attempts to act outside its mandate (e.g., going over budget, paying a rogue vendor), the TEE physically rejects the execution and logs the violation.
+
+---
+
+## 🛡️ Hardware-Enforced Guardrails
+
+Aegis implements four critical security checks inside the Rust contract:
+
+*   **Vendor Whitelists:** The TEE checks if the requested vendor is on the approved mandate list.
+*   **Budget Ceilings:** The TEE guarantees that the cumulative payouts never exceed the delegated budget.
+*   **Mandate Expiries:** Sub-mandates have strict UNIX timestamp expiries.
+*   **Placeholder Egress (PCI Compliance):** The agents *never* see the plain-text payout addresses of the vendors. They submit requests using placeholders like `{{profile.vendors.vendor_alpha.payout_ref}}`. The Terminal 3 TEE resolves these placeholders internally just before making the HTTP egress call to the settlement rail, ensuring the agents remain completely out of PCI scope.
+
+---
+
+## 🚀 Project Structure
+
+*   `contracts/z-tenant-treasury/` - The Rust/WASM TEE smart contract that enforces the treasury policy, AML checks, and the immutable ledger.
+*   `orchestrator/` - TypeScript environment setups and CLI scripts that simulate the Agent attack/payout workflows.
+*   `dashboard/` - A Next.js visual dashboard backed by NeonDB (PostgreSQL) and Prisma, providing a real-time window into the TEE state.
+
+---
+
+## 💻 Getting Started (Local Development)
 
 ```bash
-# Install dependencies across all workspaces
+# 1. Install dependencies across all workspaces
 npm install
 
-# Setup environment variables
+# 2. Setup environment variables
 cp .env.example .env
+cp dashboard/.env.example dashboard/.env
 
-# Start the local Next.js dashboard
+# 3. Start the local Next.js dashboard
 npm run dev
 ```
 
-By default, the dashboard and CLI use `T3_PROVIDER=mock`. This allows you to run the full demo locally without testnet credentials. Switch to `T3_PROVIDER=t3` when your Terminal 3 keys and agent credits are ready.
+*Note: By default, the project uses `T3_PROVIDER=mock`, allowing you to run the full dashboard and multi-agent simulation locally without requiring live testnet credentials.*
 
-## Live T3 Testnet Setup
+---
 
-To run the live testnet flow, you will need your `TENANT_DID` and `TENANT_KEY`. 
-Then, generate the throwaway user and agent keys:
+## 🌐 Live T3 Testnet Setup
 
+To run the live testnet flow, configure your `.env` with `T3_PROVIDER=t3` and input your `TENANT_DID` and `TENANT_KEY`. 
+
+**1. Generate Agent Keys:**
 ```bash
-# Generates throwaway EVM keys for User, Orchestrator, and Sub-Agent
-npm run env:wallets
-
-# Authenticates those keys on T3 to discover their DIDs
-npm run env:identify
+npm run env:wallets   # Generates throwaway EVM keys for Orchestrator & Sub-Agent
+npm run env:identify  # Authenticates keys on T3 to discover their DIDs
 ```
 
-**IMPORTANT:** Before executing the real flow, you must ensure that your Agent DIDs are funded with T3 test credits via the Terminal 3 Faucet.
+**2. Fund Agents:**
+Ensure both your `ORCHESTRATOR_DID` and `SUB_AGENT_DID` are funded with T3 test credits via the Terminal 3 Faucet.
 
-## Demo Flow Scripts
-
-Run these scripts in order to demonstrate the treasury lifecycle:
-
+**3. Execute the Lifecycle:**
 ```bash
-# 1. Compile the Rust WASM contract (requires wasm32-wasip2 target)
-npm run contract:build
-
-# 2. Register the contract on T3 and seed the initial treasury mandate
-npm run cli:setup
-
-# 3. User grants the agents access to `pay-invoice` and `read-ledger`
-npm run cli:grant
-
-# 4. The Sub-Agent successfully pays an approved invoice
-npm run cli:pay
-
-# 5. Attack scripts prove the TEE guardrails hold (e.g. over budget, rogue vendor)
-npm run cli:attacks
+npm run contract:build  # Compile the Rust WASM contract
+npm run cli:setup       # Register contract on T3 & seed master mandate
+npm run cli:grant       # User grants permissions to the AI Agents
+npm run cli:pay         # The Sub-Agent pays an approved invoice via TEE
+npm run cli:attacks     # Attack scripts prove the TEE blocks rogue actions
 ```
 
-## Deployment Guide
+---
 
-Deploying this project to production involves three separate environments:
+## ☁️ Deployment
 
-### 1. Smart Contract Deployment (Terminal 3 TEE)
-The Rust contract is "deployed" to the Terminal 3 platform dynamically. 
-Running `npm run cli:setup` automatically compiles the WASM (if changed) and registers it on the testnet under your Tenant DID. No manual server deployment is required for the backend logic.
-
-### 2. Frontend Dashboard Deployment (Vercel)
-The `dashboard` is a standard Next.js application. 
-- Ensure your `DATABASE_URL` is set to a persistent database (e.g., PostgreSQL via Prisma) instead of local SQLite if you want data to persist across deployments.
-- Deploy the `dashboard` directory directly to **Vercel** or **Netlify**. Set the Root Directory to `dashboard` in your Vercel project settings.
-
-### 3. Agent Scripts Deployment (Cron / Worker)
-The scripts in `orchestrator/src/` currently simulate the AI agents. In a real deployment, these would run on a secure backend server (like **Render**, **Railway**, or **AWS ECS**) as a continuous background worker, listening for incoming invoices and triggering `delegateMandate` or `payInvoice` using the T3 SDK.
+*   **Frontend / Backend:** The Dashboard and API routes are designed for **Vercel**. When `T3_PROVIDER=t3`, the Next.js API route (`/api/pay`) securely communicates with the Terminal 3 testnet to execute A2A transactions synchronously.
+*   **Smart Contract:** Deployed directly to the Terminal 3 infrastructure via the `cli:setup` script. No manual server hosting required.
